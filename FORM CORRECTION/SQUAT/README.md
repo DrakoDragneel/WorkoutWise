@@ -1,9 +1,9 @@
-<h2 align="center">BICEP CURL MODEL TRAINING PROCESS</h2>
+<h2 align="center">SQUAT REP COUNT & Form correction</h2>
 
 ### 1. Folder structure
 
 ```
-bicep_model
+SQUAT
 │   1.counter_model.ipynb - train models using Sklearn ML algo and evaluate the models results
 |   2.analyzed_bad_pose.ipynb - analyze feet and knee position in correct squat exercise
 │   3.detection.ipynb - detection on test videos
