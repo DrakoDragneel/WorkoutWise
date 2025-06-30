@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify
 from recommender import recommend_workout
 
@@ -15,3 +14,7 @@ def recommend():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+@app.route('/')
+def home():
+    return "API is running. Use POST /recommend to get workout recommendations."
