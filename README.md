@@ -129,3 +129,68 @@ Specify your license here (e.g., MIT, Apache 2.0).
 
 ## Author
 Add your name and contact information here.
+
+---
+
+## API Documentation for Flutter Integration
+
+### Authentication
+- The backend expects a valid Supabase user ID in the `X-User-Id` header for each request.
+
+### Endpoints
+
+#### 1. Plank Analysis
+- **POST** `/plank/analyze`
+- **Description:** Analyze a video for plank form correction and duration in correct/incorrect form.
+- **Headers:**
+  - `X-User-Id: <supabase_user_id>`
+- **Request (multipart/form-data):**
+  - `file`: Video file (e.g., `.mp4`)
+- **Response (application/json):**
+  ```json
+  {
+    "correct_form_time_seconds": 30,
+    "incorrect_form_time_seconds": 10,
+    "rep_count": 0,
+    "details": {}
+  }
+  ```
+- **Notes:**
+  - `rep_count` is always 0 (not implemented for plank).
+  - `details` is reserved for future feedback.
+
+#### 2. Squat Analysis
+- **POST** `/squat/analyze`
+- **Description:** Analyze a video for squat rep counting and form feedback.
+- **Headers:**
+  - `X-User-Id: <supabase_user_id>`
+- **Request (multipart/form-data):**
+  - `file`: Video file (e.g., `.mp4`)
+- **Response (application/json):**
+  ```json
+  {
+    "rep_count": 15,
+    "foot_status": "Correct",
+    "knee_status": "Too tight",
+    "details": {}
+  }
+  ```
+- **Notes:**
+  - `foot_status` and `knee_status` can be `Correct`, `Too tight`, `Too wide`, or `UNK` (unknown).
+  - `details` is reserved for future feedback.
+
+### Example Usage (Flutter)
+
+```dart
+final request = http.MultipartRequest('POST', Uri.parse('http://<your-backend>/plank/analyze'));
+request.headers['X-User-Id'] = supabaseUserId;
+request.files.add(await http.MultipartFile.fromPath('file', videoPath));
+final response = await request.send();
+```
+
+### CORS
+- CORS is enabled for all origins, so the Flutter app can access the backend directly.
+
+---
+
+For any questions or integration issues, please contact the backend developer.
