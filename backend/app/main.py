@@ -33,10 +33,12 @@ app.add_middleware(
 
 # Load model and scaler once at startup
 MODEL_DIR = os.path.join(os.path.dirname(__file__), 'models')
-with open(os.path.join(MODEL_DIR, "LR_model.pkl"), "rb") as f:
-    sklearn_model = pickle.load(f)
-with open(os.path.join(MODEL_DIR, "input_scaler.pkl"), "rb") as f2:
-    input_scaler = pickle.load(f2)
+with open(os.path.join(MODEL_DIR, "plank_LR_model.pkl"), "rb") as f:
+    plank_model = pickle.load(f)
+with open(os.path.join(MODEL_DIR, "plank_input_scaler.pkl"), "rb") as f2:
+    plank_scaler = pickle.load(f2)
+with open(os.path.join(MODEL_DIR, "squat_LR_model.pkl"), "rb") as f3:
+    squat_model = pickle.load(f3)
 
 mp_pose = mp.solutions.pose
 
@@ -154,9 +156,9 @@ async def analyze_plank(file: UploadFile = File(...), x_user_id: str = Header(..
                 try:
                     row = extract_important_keypoints(results)
                     X = pd.DataFrame([row])
-                    X_scaled = pd.DataFrame(input_scaler.transform(X))
-                    pred = sklearn_model.predict(X_scaled)[0]
-                    prob = sklearn_model.predict_proba(X_scaled)[0]
+                    X_scaled = pd.DataFrame(plank_scaler.transform(X))
+                    pred = plank_model.predict(X_scaled)[0]
+                    prob = plank_model.predict_proba(X_scaled)[0]
                     label = get_class(pred)
 
                     if prob[np.argmax(prob)] >= prediction_threshold:
@@ -227,9 +229,9 @@ async def analyze_squat(file: UploadFile = File(...), x_user_id: str = Header(..
                 try:
                     row = extract_squat_keypoints(results)
                     X = pd.DataFrame([row], columns=SQUAT_HEADERS[1:])
-                    predicted_class = sklearn_model.predict(X)[0]
+                    predicted_class = squat_model.predict(X)[0]
                     predicted_class = "down" if predicted_class == 0 else "up"
-                    pred_prob = round(sklearn_model.predict_proba(X)[0].max(), 2)
+                    pred_prob = round(squat_model.predict_proba(X)[0].max(), 2)
                     if predicted_class == "down" and pred_prob >= PREDICTION_PROB_THRESHOLD:
                         current_stage = "down"
                     elif current_stage == "down" and predicted_class == "up" and pred_prob >= PREDICTION_PROB_THRESHOLD:
@@ -279,8 +281,8 @@ async def analyze_plank_frame(file: UploadFile = File(...), x_user_id: str = Hea
         try:
             row = extract_important_keypoints(results)
             X = pd.DataFrame([row])
-            X_scaled = pd.DataFrame(input_scaler.transform(X))
-            pred = sklearn_model.predict(X_scaled)[0]
+            X_scaled = pd.DataFrame(plank_scaler.transform(X))
+            pred = plank_model.predict(X_scaled)[0]
             label = get_class(pred)
             # For demo: rep_count is always 0 (implement stateful counting in app if needed)
             return JSONResponse({
@@ -314,7 +316,7 @@ async def analyze_squat_frame(file: UploadFile = File(...), x_user_id: str = Hea
         try:
             row = extract_squat_keypoints(results)
             X = pd.DataFrame([row], columns=SQUAT_HEADERS[1:])
-            predicted_class = sklearn_model.predict(X)[0]
+            predicted_class = squat_model.predict(X)[0]
             label = "down" if predicted_class == 0 else "up"
             # For demo: rep_count is always 0 (implement stateful counting in app if needed)
             return JSONResponse({
