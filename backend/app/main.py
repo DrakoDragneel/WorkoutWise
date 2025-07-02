@@ -11,8 +11,16 @@ import tempfile
 import os
 import uuid
 import shutil
+import logging
 
 app = FastAPI()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s %(message)s',
+)
+logger = logging.getLogger("workoutwise-api")
 
 # Enable CORS for all origins (adjust in production)
 app.add_middleware(
@@ -105,8 +113,15 @@ def analyze_foot_knee_placement(results, stage: str, foot_shoulder_ratio_thresho
         analyzed_results["knee_placement"] = 2
     return analyzed_results
 
+@app.get("/health")
+def health_check():
+    """Health check endpoint for uptime monitoring."""
+    logger.info("Health check requested.")
+    return {"status": "ok", "message": "API is healthy", "timestamp": __import__('datetime').datetime.utcnow().isoformat()}
+
 @app.post("/plank/analyze")
 async def analyze_plank(file: UploadFile = File(...), x_user_id: str = Header(...)):
+    logger.info(f"Plank analysis requested by user: {x_user_id}")
     """Analyze a plank exercise video/image. Returns rep count, form feedback, and details."""
     contents = await file.read()
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
@@ -156,7 +171,8 @@ async def analyze_plank(file: UploadFile = File(...), x_user_id: str = Header(..
                             incorrect_time += 1
 
                 except Exception as e:
-                    print("Prediction error:", e)
+                    logger.error(f"Plank analysis error: {e}")
+                    continue
 
     cap.release()
     os.remove(tmp_path)
@@ -183,6 +199,7 @@ async def analyze_plank(file: UploadFile = File(...), x_user_id: str = Header(..
 
 @app.post("/squat/analyze")
 async def analyze_squat(file: UploadFile = File(...), x_user_id: str = Header(...)):
+    logger.info(f"Squat analysis requested by user: {x_user_id}")
     temp_filename = f"temp_{uuid.uuid4().hex}.mp4"
     with open(temp_filename, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -227,7 +244,7 @@ async def analyze_squat(file: UploadFile = File(...), x_user_id: str = Header(..
                     foot_buffer.append(analyzed["foot_placement"])
                     knee_buffer.append(analyzed["knee_placement"])
                 except Exception as e:
-                    print(f"⚠️ Error in frame: {e}")
+                    logger.error(f"Squat analysis error: {e}")
                     continue
     cap.release()
     os.remove(temp_filename)
