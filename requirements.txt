@@ -1,10 +1,8 @@
-Flask
-numpy
-pandas
-scikit-learn
-joblib
 fastapi
-mediapipe
 uvicorn
 python-multipart
 opencv-python
+mediapipe
+pandas
+numpy
+scikit-learn
