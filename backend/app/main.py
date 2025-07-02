@@ -258,3 +258,72 @@ async def analyze_squat(file: UploadFile = File(...), x_user_id: str = Header(..
         "knee_status": knee_status,
         "details": {}
     })
+
+@app.post("/plank/analyze-frame")
+async def analyze_plank_frame(file: UploadFile = File(...), x_user_id: str = Header(...)):
+    logger.info(f"Plank frame analysis requested by user: {x_user_id}")
+    contents = await file.read()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+        tmp.write(contents)
+        tmp_path = tmp.name
+    frame = cv2.imread(tmp_path)
+    os.remove(tmp_path)
+    if frame is None:
+        logger.error("Could not read image frame for plank analysis.")
+        return JSONResponse({"error": "Invalid image frame."}, status_code=400)
+    image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    image_rgb.flags.writeable = False
+    with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
+        results = pose.process(image_rgb)
+    if results.pose_landmarks:
+        try:
+            row = extract_important_keypoints(results)
+            X = pd.DataFrame([row])
+            X_scaled = pd.DataFrame(input_scaler.transform(X))
+            pred = sklearn_model.predict(X_scaled)[0]
+            label = get_class(pred)
+            # For demo: rep_count is always 0 (implement stateful counting in app if needed)
+            return JSONResponse({
+                "form_status": label,  # "C" (correct), "H" (high), "L" (low)
+                "rep_count": 0,
+                "details": {}
+            })
+        except Exception as e:
+            logger.error(f"Plank frame analysis error: {e}")
+            return JSONResponse({"error": str(e)}, status_code=500)
+    else:
+        return JSONResponse({"form_status": "no_person", "rep_count": 0, "details": {}}, status_code=200)
+
+@app.post("/squat/analyze-frame")
+async def analyze_squat_frame(file: UploadFile = File(...), x_user_id: str = Header(...)):
+    logger.info(f"Squat frame analysis requested by user: {x_user_id}")
+    contents = await file.read()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+        tmp.write(contents)
+        tmp_path = tmp.name
+    frame = cv2.imread(tmp_path)
+    os.remove(tmp_path)
+    if frame is None:
+        logger.error("Could not read image frame for squat analysis.")
+        return JSONResponse({"error": "Invalid image frame."}, status_code=400)
+    image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    image_rgb.flags.writeable = False
+    with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
+        results = pose.process(image_rgb)
+    if results.pose_landmarks:
+        try:
+            row = extract_squat_keypoints(results)
+            X = pd.DataFrame([row], columns=SQUAT_HEADERS[1:])
+            predicted_class = sklearn_model.predict(X)[0]
+            label = "down" if predicted_class == 0 else "up"
+            # For demo: rep_count is always 0 (implement stateful counting in app if needed)
+            return JSONResponse({
+                "form_status": label,  # "up", "down"
+                "rep_count": 0,
+                "details": {}
+            })
+        except Exception as e:
+            logger.error(f"Squat frame analysis error: {e}")
+            return JSONResponse({"error": str(e)}, status_code=500)
+    else:
+        return JSONResponse({"form_status": "no_person", "rep_count": 0, "details": {}}, status_code=200)
